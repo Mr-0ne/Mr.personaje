@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>¿Qué Personaje Eres Hoy?</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* Brillo holográfico animado para la tarjeta */
+    .card-glow {
+      position: relative;
+    }
+    .card-glow::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 1.5rem;
+      background: linear-gradient(135deg, #a855f7, #ec4899, #3b82f6, #06b6d4, #a855f7);
+      background-size: 300% 300%;
+      z-index: -1;
+      animation: glowPan 7s ease infinite;
+      filter: blur(10px);
+      opacity: 0.85;
+    }
+
+    @keyframes glowPan {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Botón pulsante místico */
+    @keyframes pulseShadow {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), inset 0 0 10px rgba(236, 72, 153, 0.2);
+      }
+      50% {
+        box-shadow: 0 0 40px rgba(236, 72, 153, 0.8), inset 0 0 20px rgba(168, 85, 247, 0.4);
+      }
+    }
+    .pulse-btn {
+      animation: pulseShadow 2.8s infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-purple-500 selection:text-white relative overflow-x-hidden">
+
+  <!-- Luces decorativas de fondo -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px]"></div>
+    <div class="absolute top-1/2 -right-40 w-96 h-96 bg-pink-600/20 rounded-full blur-[100px]"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px]"></div>
+  </div>
+
+  <!-- Encabezado -->
+  <header class="relative z-10 w-full px-4 py-4 border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-md">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+          <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-purple-300 via-pink-300 to-amber-200 bg-clip-text text-transparent">
+            ¿Qué Personaje Eres Hoy?
+          </h1>
+          <p class="text-[11px] text-slate-400">Tu oráculo diario de personajes</p>
+        </div>
+      </div>
+
+      <!-- Botón de test para reiniciar sin esperar a medianoche -->
+      <button id="resetBtn" title="Reiniciar tirada de hoy (Modo Pruebas)" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-purple-400"></i>
+        <span class="hidden sm:inline">Reset Hoy (Test)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Área Principal -->
+  <main class="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-6 max-w-md mx-auto w-full">
+
+    <!-- 1. VISTA INICIAL: Botón disponible -->
+    <div id="unrevealedView" class="w-full flex flex-col items-center text-center">
+      <div class="relative mb-6">
+        <div class="w-32 h-32 rounded-3xl bg-slate-900/80 border-2 border-dashed border-purple-500/40 flex items-center justify-center shadow-2xl backdrop-blur-sm relative group">
+          <i data-lucide="help-circle" class="w-16 h-16 text-purple-400/80 group-hover:scale-110 transition-transform duration-300"></i>
+        </div>
+        <span class="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-0.5 text-[10px] font-bold tracking-wider rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase whitespace-nowrap">
+          1 Tirada por día
+        </span>
+      </div>
+
+      <h2 class="text-2xl sm:text-3xl font-black mb-3 tracking-tight">
+        Descubre tu identidad de hoy
+      </h2>
+      <p class="text-slate-400 text-xs sm:text-sm mb-8 leading-relaxed max-w-xs">
+        El destino decide qué personaje te representa hoy. No podrás cambiarlo hasta mañana.
+      </p>
+
+      <button id="playBtn" class="pulse-btn w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white font-extrabold text-base sm:text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-transform flex items-center justify-center gap-2.5">
+        <i data-lucide="dices" class="w-5 h-5"></i>
+        <span>¿QUÉ PERSONAJE ERES HOY?</span>
+      </button>
+    </div>
+
+    <!-- 2. VISTA RULETA: Sorteo animado -->
+    <div id="rouletteView" class="hidden w-full flex-col items-center text-center py-6">
+      <div class="w-full rounded-3xl bg-slate-900/90 border border-slate-700/80 p-6 shadow-2xl flex flex-col items-center">
+        <div class="w-48 h-48 rounded-2xl overflow-hidden border border-purple-500/50 mb-4 bg-slate-950 shadow-inner">
+          <img id="rouletteImg" src="" alt="Sorteando..." class="w-full h-full object-cover">
+        </div>
+        <h3 id="rouletteName" class="text-xl font-black text-purple-300 truncate w-full px-2">Sorteando...</h3>
+        <p class="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-pink-400"></i>
+          Consultando a los astros...
+        </p>
+      </div>
+    </div>
+
+    <!-- 3. VISTA REVELADO: Tarjeta con el personaje asignado -->
+    <div id="revealedView" class="hidden w-full flex-col items-center">
+      
+      <!-- Cronómetro hasta medianoche -->
+      <div class="w-full flex items-center justify-between mb-4 bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-semibold text-slate-300">Asignado para hoy</span>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Siguiente tirada en:</span>
+          <span id="countdownText" class="text-xs font-mono font-bold text-amber-400">00:00:00</span>
+        </div>
+      </div>
+
+      <!-- Tarjeta Principal -->
+      <div class="card-glow w-full rounded-3xl p-6 bg-slate-900/95 border border-slate-700/70 shadow-2xl flex flex-col items-center text-center backdrop-blur-xl">
+        <div class="mb-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold tracking-wider uppercase">
+          <i data-lucide="crown" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Tu Personaje de Hoy</span>
+        </div>
+
+        <!-- Foto -->
+        <div class="w-52 h-52 rounded-2xl overflow-hidden border-2 border-slate-600/60 shadow-xl mb-4 bg-slate-950">
+          <img id="cardImage" src="" alt="Personaje" class="w-full h-full object-cover">
+        </div>
+
+        <!-- Nombre -->
+        <h3 id="cardName" class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">
+          Nombre
+        </h3>
+
+        <!-- Descripción / Frase -->
+        <div class="w-full bg-slate-950/70 rounded-xl p-3 border border-slate-800/80 mb-5">
+          <p id="cardTag" class="text-xs sm:text-sm italic text-slate-300 font-medium">
+            "Frase o descripción..."
+          </p>
+        </div>
+
+        <!-- Botones de Compartir -->
+        <div class="w-full grid grid-cols-2 gap-2">
+          <button id="shareBtn" class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 active:scale-95 text-white font-semibold text-xs transition-all shadow-lg shadow-purple-600/30">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+            <span>Compartir</span>
+          </button>
+          <button id="copyBtn" class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 font-semibold text-xs transition-all">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>Copiar Texto</span>
+          </button>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-slate-500 mt-4 text-center">
+        Vuelve mañana a las 00:00 para descubrir a tu próximo personaje.
+      </p>
+    </div>
+
+  </main>
+
+  <!-- Notificación Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transform translate-y-20 opacity-0 transition-all duration-300 px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold shadow-2xl flex items-center gap-2 text-slate-100 pointer-events-none">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMsg">Mensaje</span>
+  </div>
+
+  <footer class="relative z-10 py-4 text-center text-xs text-slate-600 border-t border-slate-900">
+    Hecho para GitHub Pages • ¿Qué Personaje Eres Hoy?
+  </footer>
+
+  <!-- ============================================================== -->
+  <!--                      LÓGICA JAVASCRIPT                        -->
+  <!-- ============================================================== -->
+  <script>
+    /* ====================================================================
+       1. LISTA DE PERSONAJES PERSONALIZABLE
+       --------------------------------------------------------------------
+       Aquí puedes poner las fotos de tu carpeta local (ej: 'characters/goku.jpg')
+       o enlaces directos de internet.
+       ==================================================================== */
+    const CHARACTERS = [
+      {
+        name: "El Estratega Silencioso",
+        tag: "Calcula cada movimiento mientras todos los demás siguen improvisando.",
+        image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
+        // Para usar tu foto local, cámbialo por: image: "characters/personaje1.jpg"
+      },
+      {
+        name: "Capitán Espresso",
+        tag: "Su energía supera las leyes de la física y el sentido común.",
+        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80"
+        // Para usar tu foto local: image: "characters/personaje2.jpg"
+      },
+      {
+        name: "El Místico Relajado",
+        tag: "La calma absoluta en medio del caos del día a día.",
+        image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80"
+        // Para usar tu foto local: image: "characters/personaje3.jpg"
+      },
+      {
+        name: "El Detective Inesperado",
+        tag: "Descubre hasta el más mínimo detalle que a los demás se les escapa.",
+        image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=600&q=80"
+        // Para usar tu foto local: image: "characters/personaje4.jpg"
+      }
+    ];
+
+    /* ====================================================================
+       2. CONTROL DIARIO & PERSISTENCIA LOCAL
+       ==================================================================== */
+    const STORAGE_DATE_KEY = "daily_char_today_date";
+    const STORAGE_CHAR_KEY = "daily_char_saved_obj";
+
+    function getTodayString() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function checkDailyStatus() {
+      const today = getTodayString();
+      const savedDate = localStorage.getItem(STORAGE_DATE_KEY);
+      const savedCharRaw = localStorage.getItem(STORAGE_CHAR_KEY);
+
+      if (savedDate === today && savedCharRaw) {
+        try {
+          const char = JSON.parse(savedCharRaw);
+          showRevealedCard(char, false);
+          return;
+        } catch (e) {
+          // Si hay error en el formato, permitir jugar
+        }
+      }
+      showUnrevealed();
+    }
+
+    // Alternar vistas
+    const unrevealedView = document.getElementById("unrevealedView");
+    const rouletteView = document.getElementById("rouletteView");
+    const revealedView = document.getElementById("revealedView");
+
+    function showUnrevealed() {
+      unrevealedView.classList.remove("hidden");
+      rouletteView.classList.add("hidden");
+      revealedView.classList.add("hidden");
+    }
+
+    function showRevealedCard(char, animate = true) {
+      unrevealedView.classList.add("hidden");
+      rouletteView.classList.add("hidden");
+      revealedView.classList.remove("hidden");
+
+      document.getElementById("cardName").textContent = char.name;
+      document.getElementById("cardTag").textContent = `"${char.tag}"`;
+      
+      const cardImg = document.getElementById("cardImage");
+      cardImg.src = char.image;
+      cardImg.onerror = () => {
+        cardImg.src = "https://placehold.co/400x400/1e1b4b/a855f7?text=" + encodeURIComponent(char.name);
+      };
+
+      if (animate) {
+        playVictorySound();
+        confetti({
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    /* ====================================================================
+       3. EFECTOS DE SONIDO SINTÉTICO (Web Audio API)
+       ==================================================================== */
+    let audioCtx = null;
+    function playTone(freq, duration, type = "sine") {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playVictorySound() {
+      const notes = [293.66, 369.99, 440.00, 587.33];
+      notes.forEach((freq, idx) => {
+        setTimeout(() => playTone(freq, 0.25, "triangle"), idx * 120);
+      });
+    }
+
+    /* ====================================================================
+       4. ANIMACIÓN DE RULETA Y ASIGNACIÓN DEFINITIVA
+       ==================================================================== */
+    function startReveal() {
+      if (!CHARACTERS || CHARACTERS.length === 0) {
+        showToast("No hay personajes definidos en la lista");
+        return;
+      }
+
+      unrevealedView.classList.add("hidden");
+      rouletteView.classList.remove("hidden");
+      revealedView.classList.add("hidden");
+
+      const rImg = document.getElementById("rouletteImg");
+      const rName = document.getElementById("rouletteName");
+
+      let count = 0;
+      const totalSteps = 22;
+      let delay = 50;
+
+      function step() {
+        const randomChar = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+        rImg.src = randomChar.image;
+        rName.textContent = randomChar.name;
+        playTone(300 + (count * 20), 0.04, "square");
+
+        count++;
+        if (count < totalSteps) {
+          delay += 12;
+          setTimeout(step, delay);
+        } else {
+          // Elección final del día
+          const finalChar = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+          const today = getTodayString();
+          localStorage.setItem(STORAGE_DATE_KEY, today);
+          localStorage.setItem(STORAGE_CHAR_KEY, JSON.stringify(finalChar));
+
+          setTimeout(() => {
+            showRevealedCard(finalChar, true);
+          }, 300);
+        }
+      }
+
+      step();
+    }
+
+    /* ====================================================================
+       5. CUENTA ATRÁS HASTA MEDIANOCHE
+       ==================================================================== */
+    function updateCountdown() {
+      const el = document.getElementById("countdownText");
+      if (!el) return;
+
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setDate(midnight.getDate() + 1);
+      midnight.setHours(0, 0, 0, 0);
+
+      const diff = midnight - now;
+      if (diff <= 0) {
+        el.textContent = "¡Disponible!";
+        return;
+      }
+
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+
+      el.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    /* ====================================================================
+       6. COMPARTIR, COPIAR Y TOAST
+       ==================================================================== */
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      document.getElementById("toastMsg").textContent = msg;
+      t.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => {
+        t.classList.add("translate-y-20", "opacity-0");
+      }, 2500);
+    }
+
+    function getShareText() {
+      const name = document.getElementById("cardName").textContent;
+      const tag = document.getElementById("cardTag").textContent;
+      return `✨ ¡Hoy mi personaje asignado es "${name}"!\n${tag}\n¿Quién eres tú hoy?`;
+    }
+
+    function copyToClipboard() {
+      const text = getShareText();
+      const tempArea = document.createElement("textarea");
+      tempArea.value = text;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        showToast("¡Texto copiado al portapapeles!");
+      } catch (e) {
+        showToast("No se pudo copiar.");
+      }
+      document.body.removeChild(tempArea);
+    }
+
+    async function handleShare() {
+      const text = getShareText();
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "¿Qué Personaje Eres Hoy?",
+            text: text,
+            url: window.location.href
+          });
+        } catch (e) {
+          copyToClipboard();
+        }
+      } else {
+        copyToClipboard();
+      }
+    }
+
+    /* ====================================================================
+       7. EVENT LISTENERS
+       ==================================================================== */
+    document.getElementById("playBtn").addEventListener("click", startReveal);
+    document.getElementById("shareBtn").addEventListener("click", handleShare);
+    document.getElementById("copyBtn").addEventListener("click", copyToClipboard);
+
+    // Botón de reset de pruebas
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      localStorage.removeItem(STORAGE_DATE_KEY);
+      localStorage.removeItem(STORAGE_CHAR_KEY);
+      showUnrevealed();
+      showToast("¡Día reiniciado! Puedes volver a tirar.");
+    });
+
+    window.onload = function() {
+      lucide.createIcons();
+      checkDailyStatus();
+    };
+  </script>
+</body>
+</html>
